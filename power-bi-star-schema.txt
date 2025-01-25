@@ -1,0 +1,74 @@
+-- D_Produtos (Product Dimension)
+DEFINE
+    TABLE D_Produtos =
+    SELECTCOLUMNS(
+        GROUPBY(
+            'Financials_origem', 
+            'ID_Produto', 
+            'Produto'
+        ),
+        "ID_Produto", 'ID_Produto',
+        "Produto", 'Produto',
+        "Media_Unidades_Vendidas", CALCULATE(AVERAGE('Financials_origem'[Units Sold])),
+        "Media_Valor_Vendas", CALCULATE(AVERAGE('Financials_origem'[Sales Price])),
+        "Mediana_Valor_Vendas", CALCULATE(MEDIAN('Financials_origem'[Sales Price])),
+        "Valor_Maximo_Venda", CALCULATE(MAX('Financials_origem'[Sales Price])),
+        "Valor_Minimo_Venda", CALCULATE(MIN('Financials_origem'[Sales Price]))
+    )
+
+-- D_Produtos_Detalhes (Product Details Dimension)
+DEFINE
+    TABLE D_Produtos_Detalhes =
+    SELECTCOLUMNS(
+        'Financials_origem',
+        "ID_Produtos", 'ID_Produto',
+        "Discount_Band", 'Discount Band',
+        "Sale_Price", 'Sales Price',
+        "Units_Sold", 'Units Sold',
+        "Manufacturing_Price", 'Manufacturing Price'
+    )
+
+-- D_Descontos (Discount Dimension)
+DEFINE
+    TABLE D_Descontos =
+    SELECTCOLUMNS(
+        GROUPBY(
+            'Financials_origem', 
+            'ID_Produto', 
+            'Discount Band'
+        ),
+        "ID_Produto", 'ID_Produto',
+        "Discount", CALCULATE(SUM('Financials_origem'[Sales Price]) - SUM('Financials_origem'[Manufacturing Price])),
+        "Discount_Band", 'Discount Band'
+    )
+
+-- D_Calendário (Calendar Dimension)
+DEFINE
+    TABLE D_Calendário = 
+    CALENDAR(
+        DATE(YEAR(MIN('Financials_origem'[Date])), 1, 1),
+        DATE(YEAR(MAX('Financials_origem'[Date])), 12, 31)
+    )
+
+-- F_Vendas (Sales Fact Table)
+DEFINE
+    TABLE F_Vendas =
+    SELECTCOLUMNS(
+        'Financials_origem',
+        "SK_ID", ROW_NUMBER(),
+        "ID_Produto", 'ID_Produto',
+        "Produto", 'Produto',
+        "Units_Sold", 'Units Sold',
+        "Sales_Price", 'Sales Price',
+        "Discount_Band", 'Discount Band',
+        "Segment", 'Segment',
+        "Country", 'Country',
+        "Salers", 'Salers',
+        "Profit", 'Profit',
+        "Date", 'Date'
+    )
+
+-- Create Relationships
+DEFINE
+    RELATIONSHIP(F_Vendas[ID_Produto] = D_Produtos[ID_Produto])
+    RELATIONSHIP(F_Vendas[Date] = D_Calendário[Date])
